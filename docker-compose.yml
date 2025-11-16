@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: issue-tracker-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: issue_tracking
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - issue-tracking-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: issue-tracker-api
+    environment:
+      DATABASE_URL: "host=postgres user=postgres password=postgres dbname=issue_tracking port=5432 sslmode=disable"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - issue-tracking-network
+
+volumes:
+  postgres_data:
+
+networks:
+  issue-tracking-network:
+    driver: bridge

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.DS_Store
+.env
+.vscode
+.idea
+main
+docker-compose.yml
+README.md
+API.md
+Dockerfile
+.dockerignore
+*.db
+*.sqlite
+*.sqlite3
