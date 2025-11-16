@@ -2,6 +2,7 @@ package routes
 
 import (
 	"issue-tracking/controllers"
+	"issue-tracking/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -9,6 +10,9 @@ import (
 
 // RegisterRoutes registers all API routes
 func RegisterRoutes(router *gin.Engine, db *gorm.DB) {
+	// Add recovery middleware
+	router.Use(utils.RecoverPanic())
+
 	// Initialize controllers
 	issueController := controllers.NewIssueController(db)
 	commentController := controllers.NewCommentController(db)

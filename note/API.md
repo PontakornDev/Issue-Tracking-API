@@ -163,21 +163,156 @@ curl -X POST http://localhost:8080/api/issues/1/comment \
 
 ## Response Format
 
-All responses are JSON. Success responses follow this format:
+### Success Response
+All successful responses follow this format with appropriate status code:
 
 ```json
 {
-  "issue_id": 1,
-  "title": "Login bug",
-  "status": {...},
-  "comments": [...]
+  "status": 200,
+  "data": {
+    "issue_id": 1,
+    "title": "Login bug",
+    "status": {...},
+    "comments": [...]
+  }
 }
 ```
 
-Error responses:
+### Error Response
 ```json
 {
-  "error": "Issue not found"
+  "status": 400,
+  "message": "Invalid request",
+  "details": "issue_id must be a positive integer"
+}
+```
+
+### Validation Error Response
+When validation fails on one or more fields:
+
+```json
+{
+  "status": 400,
+  "message": "Validation failed",
+  "details": [
+    {
+      "field": "title",
+      "message": "title must be at least 3 characters"
+    },
+    {
+      "field": "priority",
+      "message": "priority must be one of: low, medium, high, critical"
+    }
+  ]
+}
+```
+
+---
+
+## Validation Rules
+
+### Issue Fields
+| Field | Validation | Example |
+|-------|-----------|---------|
+| `title` | Required, 3-255 chars | "Login bug" |
+| `description` | Optional | "Users cannot log in..." |
+| `priority` | Required, one of: low, medium, high, critical | "high" |
+| `reporter_id` | Required, user must exist | 1 |
+| `assignee_id` | Optional, officer must exist if provided | 1 |
+| `status_id` | Required, status must exist | 1 |
+
+### Comment Fields
+| Field | Validation | Example |
+|-------|-----------|---------|
+| `user_id` | Required, user must exist | 1 |
+| `content` | Required, 1-2000 chars | "This is a comment" |
+
+### Status Update Fields
+| Field | Validation | Example |
+|-------|-----------|---------|
+| `new_status_id` | Required, status must exist | 2 |
+| `comment` | Optional, 0-255 chars | "Moved to in progress" |
+
+---
+
+## Example Validation Errors
+
+### Missing Required Field
+```bash
+curl -X POST http://localhost:8080/api/issues \
+  -H "Content-Type: application/json" \
+  -d '{"reporter_id": 1}'
+```
+
+Response: `400 Bad Request`
+```json
+{
+  "status": 400,
+  "message": "Validation failed",
+  "details": [
+    {
+      "field": "title",
+      "message": "title is required"
+    },
+    {
+      "field": "status_id",
+      "message": "status_id is required"
+    }
+  ]
+}
+```
+
+### Invalid Priority
+```bash
+curl -X POST http://localhost:8080/api/issues \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reporter_id": 1,
+    "status_id": 1,
+    "title": "Bug",
+    "priority": "urgent"
+  }'
+```
+
+Response: `400 Bad Request`
+```json
+{
+  "status": 400,
+  "message": "Validation failed",
+  "details": [
+    {
+      "field": "priority",
+      "message": "priority must be one of: low, medium, high, critical"
+    }
+  ]
+}
+```
+
+### Invalid Issue ID
+```bash
+curl http://localhost:8080/api/issues/abc
+```
+
+Response: `400 Bad Request`
+```json
+{
+  "status": 400,
+  "message": "Invalid issue ID",
+  "details": "issue_id must be a positive integer"
+}
+```
+
+### Non-existent Resource
+```bash
+curl http://localhost:8080/api/issues/9999
+```
+
+Response: `404 Not Found`
+```json
+{
+  "status": 404,
+  "message": "Issue not found",
+  "details": null
 }
 ```
 

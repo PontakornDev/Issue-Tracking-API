@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"issue-tracking/entities"
+	"issue-tracking/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -33,15 +34,25 @@ func (ic *IssueController) GetAllIssues(c *gin.Context) {
 		Preload("Status").
 		Preload("Comments").
 		Find(&issues).Error; err != nil {
-		c.JSON(500, gin.H{"error": "Failed to fetch issues"})
+		utils.RespondError(c, 500, "Failed to fetch issues", nil)
 		return
 	}
-	c.JSON(200, issues)
+
+	if issues == nil {
+		issues = []entities.Issue{}
+	}
+	utils.RespondSuccess(c, 200, issues)
 }
 
 // GetIssue retrieves a single issue by ID with relations
 func (ic *IssueController) GetIssue(c *gin.Context) {
 	id := c.Param("id")
+	issueID, err := strconv.ParseUint(id, 10, 32)
+	if err != nil {
+		utils.RespondError(c, 400, "Invalid issue ID", "issue_id must be a positive integer")
+		return
+	}
+
 	var issue entities.Issue
 	if err := ic.db.
 		Preload("Reporter").
@@ -49,30 +60,80 @@ func (ic *IssueController) GetIssue(c *gin.Context) {
 		Preload("Status").
 		Preload("StatusHistory").
 		Preload("Comments").
-		First(&issue, id).Error; err != nil {
+		First(&issue, issueID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "Issue not found"})
+			utils.RespondError(c, 404, "Issue not found", nil)
 			return
 		}
-		c.JSON(500, gin.H{"error": "Failed to fetch issue"})
+		utils.RespondError(c, 500, "Failed to fetch issue", nil)
 		return
 	}
-	c.JSON(200, issue)
+	utils.RespondSuccess(c, 200, issue)
 }
 
 // CreateIssue creates a new issue
 func (ic *IssueController) CreateIssue(c *gin.Context) {
 	var issue entities.Issue
 	if err := c.ShouldBindJSON(&issue); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		utils.RespondError(c, 400, "Invalid request body", err.Error())
 		return
 	}
 
-	if err := ic.db.Create(&issue).Error; err != nil {
-		c.JSON(500, gin.H{"error": "Failed to create issue"})
+	// Validate the issue
+	if validationErrors := utils.ValidateStruct(issue); len(validationErrors) > 0 {
+		utils.RespondValidationError(c, validationErrors)
 		return
 	}
-	c.JSON(201, issue)
+
+	// Validate reporter exists
+	var reporter entities.User
+	if err := ic.db.First(&reporter, issue.ReporterID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			utils.RespondError(c, 400, "Reporter not found", "invalid reporter_id")
+			return
+		}
+		utils.RespondError(c, 500, "Failed to validate reporter", nil)
+		return
+	}
+
+	// Validate status exists
+	var status entities.IssueStatus
+	if err := ic.db.First(&status, issue.StatusID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			utils.RespondError(c, 400, "Status not found", "invalid status_id")
+			return
+		}
+		utils.RespondError(c, 500, "Failed to validate status", nil)
+		return
+	}
+
+	// Validate assignee if provided
+	if issue.AssigneeID != nil {
+		var assignee entities.Officer
+		if err := ic.db.First(&assignee, *issue.AssigneeID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				utils.RespondError(c, 400, "Assignee not found", "invalid assignee_id")
+				return
+			}
+			utils.RespondError(c, 500, "Failed to validate assignee", nil)
+			return
+		}
+	}
+
+	if err := ic.db.Create(&issue).Error; err != nil {
+		utils.RespondError(c, 500, "Failed to create issue", err.Error())
+		return
+	}
+
+	// Reload with relations
+	ic.db.
+		Preload("Reporter").
+		Preload("Assignee").
+		Preload("Status").
+		Preload("Comments").
+		First(&issue, issue.IssueID)
+
+	utils.RespondSuccess(c, 201, issue)
 }
 
 // UpdateIssue updates an existing issue
@@ -80,30 +141,45 @@ func (ic *IssueController) UpdateIssue(c *gin.Context) {
 	id := c.Param("id")
 	issueID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid issue ID"})
+		utils.RespondError(c, 400, "Invalid issue ID", "issue_id must be a positive integer")
 		return
 	}
 
 	var issue entities.Issue
 	if err := ic.db.First(&issue, issueID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "Issue not found"})
+			utils.RespondError(c, 404, "Issue not found", nil)
 			return
 		}
-		c.JSON(500, gin.H{"error": "Failed to fetch issue"})
+		utils.RespondError(c, 500, "Failed to fetch issue", nil)
 		return
 	}
 
 	if err := c.ShouldBindJSON(&issue); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		utils.RespondError(c, 400, "Invalid request body", err.Error())
+		return
+	}
+
+	// Validate the updated issue
+	if validationErrors := utils.ValidateStruct(issue); len(validationErrors) > 0 {
+		utils.RespondValidationError(c, validationErrors)
 		return
 	}
 
 	if err := ic.db.Save(&issue).Error; err != nil {
-		c.JSON(500, gin.H{"error": "Failed to update issue"})
+		utils.RespondError(c, 500, "Failed to update issue", err.Error())
 		return
 	}
-	c.JSON(200, issue)
+
+	// Reload with relations
+	ic.db.
+		Preload("Reporter").
+		Preload("Assignee").
+		Preload("Status").
+		Preload("Comments").
+		First(&issue, issueID)
+
+	utils.RespondSuccess(c, 200, issue)
 }
 
 // UpdateIssueStatus updates only the status of an issue
@@ -111,7 +187,7 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 	id := c.Param("id")
 	issueID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid issue ID"})
+		utils.RespondError(c, 400, "Invalid issue ID", "issue_id must be a positive integer")
 		return
 	}
 
@@ -122,7 +198,7 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 
 	var req StatusUpdate
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		utils.RespondError(c, 400, "Invalid request body", err.Error())
 		return
 	}
 
@@ -130,10 +206,21 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 	var issue entities.Issue
 	if err := ic.db.First(&issue, issueID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(404, gin.H{"error": "Issue not found"})
+			utils.RespondError(c, 404, "Issue not found", nil)
 			return
 		}
-		c.JSON(500, gin.H{"error": "Failed to fetch issue"})
+		utils.RespondError(c, 500, "Failed to fetch issue", nil)
+		return
+	}
+
+	// Validate new status exists
+	var status entities.IssueStatus
+	if err := ic.db.First(&status, req.NewStatusID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			utils.RespondError(c, 400, "Invalid status", "status_id does not exist")
+			return
+		}
+		utils.RespondError(c, 500, "Failed to validate status", nil)
 		return
 	}
 
@@ -141,7 +228,7 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 
 	// Update the issue status
 	if err := ic.db.Model(&issue).Update("status_id", req.NewStatusID).Error; err != nil {
-		c.JSON(500, gin.H{"error": "Failed to update status"})
+		utils.RespondError(c, 500, "Failed to update status", err.Error())
 		return
 	}
 
@@ -155,7 +242,7 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 	}
 
 	if err := ic.db.Create(&history).Error; err != nil {
-		c.JSON(500, gin.H{"error": "Failed to record status history"})
+		utils.RespondError(c, 500, "Failed to record status history", err.Error())
 		return
 	}
 
@@ -166,11 +253,11 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 		Preload("Status").
 		Preload("Comments").
 		First(&issue, issueID).Error; err != nil {
-		c.JSON(500, gin.H{"error": "Failed to fetch updated issue"})
+		utils.RespondError(c, 500, "Failed to fetch updated issue", nil)
 		return
 	}
 
-	c.JSON(200, issue)
+	utils.RespondSuccess(c, 200, issue)
 }
 
 // DeleteIssue deletes an issue by ID
@@ -178,12 +265,12 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 	id := c.Param("id")
 	issueID, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "Invalid issue ID"})
+		utils.RespondError(c, 400, "Invalid issue ID", "issue_id must be a positive integer")
 		return
 	}
 
 	if err := ic.db.Delete(&entities.Issue{}, issueID).Error; err != nil {
-		c.JSON(500, gin.H{"error": "Failed to delete issue"})
+		utils.RespondError(c, 500, "Failed to delete issue", err.Error())
 		return
 	}
 	c.JSON(204, nil)
