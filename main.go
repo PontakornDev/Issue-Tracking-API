@@ -24,22 +24,38 @@ func init() {
 		dsn = "host=localhost user=postgres password=postgres dbname=issue_tracking port=5432 sslmode=disable"
 	}
 
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	// Auto-migrate the schema
-	if err := db.AutoMigrate(
-		&entities.User{},
-		&entities.Officer{},
-		&entities.IssueStatus{},
-		&entities.Issue{},
-		&entities.IssueStatusHistory{},
-		&entities.Comment{},
-	); err != nil {
-		log.Fatalf("failed to migrate database: %v", err)
+	if err := db.AutoMigrate(&entities.User{}); err != nil {
+		log.Fatalf("failed to migrate User: %v", err)
 	}
+
+	if err := db.AutoMigrate(&entities.Officer{}); err != nil {
+		log.Fatalf("failed to migrate Officer: %v", err)
+	}
+
+	if err := db.AutoMigrate(&entities.IssueStatus{}); err != nil {
+		log.Fatalf("failed to migrate IssueStatus: %v", err)
+	}
+
+	if err := db.AutoMigrate(&entities.Issue{}); err != nil {
+		log.Fatalf("failed to migrate Issue: %v", err)
+	}
+
+	if err := db.AutoMigrate(&entities.IssueStatusHistory{}); err != nil {
+		log.Fatalf("failed to migrate IssueStatusHistory: %v", err)
+	}
+
+	if err := db.AutoMigrate(&entities.Comment{}); err != nil {
+		log.Fatalf("failed to migrate Comment: %v", err)
+	}
+
+	// utils.MockData(db)
 
 	fmt.Println("Database initialized successfully")
 }

@@ -74,16 +74,16 @@ func (ic *IssueController) GetIssue(c *gin.Context) {
 // CreateIssue creates a new issue
 func (ic *IssueController) CreateIssue(c *gin.Context) {
 	var issue entities.Issue
-	if err := c.ShouldBindJSON(&issue); err != nil {
+	if err := c.Bind(&issue); err != nil {
 		utils.RespondError(c, 400, "Invalid request body", err.Error())
 		return
 	}
 
 	// Validate the issue
-	if validationErrors := utils.ValidateStruct(issue); len(validationErrors) > 0 {
-		utils.RespondValidationError(c, validationErrors)
-		return
-	}
+	// if validationErrors := utils.ValidateStruct(issue); len(validationErrors) > 0 {
+	// 	utils.RespondValidationError(c, validationErrors)
+	// 	return
+	// }
 
 	// Validate reporter exists
 	var reporter entities.User
