@@ -193,6 +193,7 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 
 	type StatusUpdate struct {
 		NewStatusID uint   `json:"new_status_id" binding:"required"`
+		AssigneeID  uint   `json:"assignee_id"`
 		Comment     string `json:"comment"`
 	}
 
@@ -227,7 +228,10 @@ func (ic *IssueController) UpdateIssueStatus(c *gin.Context) {
 	oldStatusID := issue.StatusID
 
 	// Update the issue status
-	if err := ic.db.Model(&issue).Update("status_id", req.NewStatusID).Error; err != nil {
+	if err := ic.db.Model(&issue).Updates(map[string]interface{}{
+		"status_id":   req.NewStatusID,
+		"assignee_id": req.AssigneeID,
+	}).Error; err != nil {
 		utils.RespondError(c, 500, "Failed to update status", err.Error())
 		return
 	}
