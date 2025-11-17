@@ -35,7 +35,7 @@ func MockData(db *gorm.DB) error {
 			IsActive:     true,
 		},
 		{
-			StatusCode:   "in_progress",
+			StatusCode:   "in-progress",
 			DisplayName:  "In Progress",
 			Description:  "Issue is being worked on",
 			Color:        "#FFA500",
