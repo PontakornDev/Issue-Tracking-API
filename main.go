@@ -55,6 +55,7 @@ func init() {
 		log.Fatalf("failed to migrate Comment: %v", err)
 	}
 
+	//! create mock data
 	// utils.MockData(db)
 
 	fmt.Println("Database initialized successfully")

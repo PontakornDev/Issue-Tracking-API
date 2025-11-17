@@ -80,10 +80,10 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 	}
 
 	// Validate the issue
-	// if validationErrors := utils.ValidateStruct(issue); len(validationErrors) > 0 {
-	// 	utils.RespondValidationError(c, validationErrors)
-	// 	return
-	// }
+	if validationErrors := utils.ValidateStruct(issue); len(validationErrors) > 0 {
+		utils.RespondValidationError(c, validationErrors)
+		return
+	}
 
 	// Validate reporter exists
 	var reporter entities.User

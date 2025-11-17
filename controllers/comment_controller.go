@@ -90,6 +90,11 @@ func (cc *CommentController) CreateComment(c *gin.Context) {
 		return
 	}
 
+	if err := cc.db.Preload("Issue").First(&comment).Error; err != nil {
+		utils.RespondError(c, 500, "Failed to fetch created comment", nil)
+		return
+	}
+
 	utils.RespondSuccess(c, 201, comment)
 }
 

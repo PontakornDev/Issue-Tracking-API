@@ -57,11 +57,11 @@ type Issue struct {
 	UpdatedAt   time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 
 	// Relations
-	Reporter      User                 `gorm:"foreignKey:ReporterID;references:UserID;constraint:OnDelete:RESTRICT" json:"reporter,omitempty"`
-	Assignee      *Officer             `gorm:"foreignKey:AssigneeID;references:OfficerID;constraint:OnDelete:SET NULL" json:"assignee,omitempty"`
-	Status        IssueStatus          `gorm:"foreignKey:StatusID;references:StatusID;constraint:OnDelete:RESTRICT" json:"status,omitempty"`
-	StatusHistory []IssueStatusHistory `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"status_history,omitempty"`
-	Comments      []Comment            `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"comments,omitempty"`
+	Reporter      User                 `gorm:"foreignKey:ReporterID;references:UserID;constraint:OnDelete:RESTRICT" json:"reporter,omitempty" validate:"-"`
+	Assignee      *Officer             `gorm:"foreignKey:AssigneeID;references:OfficerID;constraint:OnDelete:SET NULL" json:"assignee,omitempty" validate:"-"`
+	Status        IssueStatus          `gorm:"foreignKey:StatusID;references:StatusID;constraint:OnDelete:RESTRICT" json:"status,omitempty" validate:"-"`
+	StatusHistory []IssueStatusHistory `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"status_history,omitempty" validate:"-"`
+	Comments      []Comment            `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"comments,omitempty" validate:"-"`
 }
 
 func (Issue) TableName() string {
@@ -79,10 +79,10 @@ type IssueStatusHistory struct {
 	ChangedAt   time.Time `gorm:"column:changed_at;autoCreateTime;index" json:"changed_at"`
 
 	// Relations
-	Issue            Issue        `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"issue,omitempty"`
-	OldStatus        *IssueStatus `gorm:"foreignKey:OldStatusID;references:StatusID;constraint:OnDelete:SET NULL" json:"old_status,omitempty"`
-	NewStatus        IssueStatus  `gorm:"foreignKey:NewStatusID;references:StatusID;constraint:OnDelete:RESTRICT" json:"new_status,omitempty"`
-	ChangedByOfficer Officer      `gorm:"foreignKey:ChangedBy;references:OfficerID;constraint:OnDelete:RESTRICT" json:"changed_by_officer,omitempty"`
+	// Issue            Issue        `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"issue,omitempty"`
+	// OldStatus        *IssueStatus `gorm:"foreignKey:OldStatusID;references:StatusID;constraint:OnDelete:SET NULL" json:"old_status,omitempty"`
+	// NewStatus        IssueStatus  `gorm:"foreignKey:NewStatusID;references:StatusID;constraint:OnDelete:RESTRICT" json:"new_status,omitempty"`
+	// ChangedByOfficer Officer      `gorm:"foreignKey:ChangedBy;references:OfficerID;constraint:OnDelete:RESTRICT" json:"changed_by_officer,omitempty"`
 }
 
 func (IssueStatusHistory) TableName() string {
@@ -98,8 +98,8 @@ type Comment struct {
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;index" json:"created_at"`
 
 	// Relations
-	Issue Issue `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"issue,omitempty"`
-	User  User  `gorm:"foreignKey:UserID;references:UserID;constraint:OnDelete:RESTRICT" json:"user,omitempty"`
+	Issue Issue `gorm:"foreignKey:IssueID;references:IssueID;constraint:OnDelete:CASCADE" json:"issue,omitempty" validate:"-"`
+	User  User  `gorm:"foreignKey:UserID;references:UserID;constraint:OnDelete:RESTRICT" json:"user,omitempty" validate:"-"`
 }
 
 func (Comment) TableName() string {
