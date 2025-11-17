@@ -70,11 +70,11 @@ GET /health
 ### Issues
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| POST | `/api/issues` | Create a new issue |
 | GET | `/api/issues` | List all issues |
 | GET | `/api/issues/:id` | Get a single issue |
-| POST | `/api/issues` | Create a new issue |
-| PUT | `/api/issues/:id` | Update an issue |
-| DELETE | `/api/issues/:id` | Delete an issue |
+| PATCH | `/api/issues/:id/status` | Update status issue |
+| POST | `/api/issues/:id/comment` | Add a comment to an issue |
 
 ## Example Requests
 
@@ -83,9 +83,12 @@ GET /health
 curl -X POST http://localhost:8080/api/issues \
   -H "Content-Type: application/json" \
   -d '{
+    "reporter_id": 1,
+    "assignee_id": null,
+    "status_id": 1,
     "title": "Login bug",
     "description": "Users cannot log in with special characters",
-    "status": "open"
+    "priority": "high"
   }'
 ```
 
@@ -94,20 +97,84 @@ curl -X POST http://localhost:8080/api/issues \
 curl http://localhost:8080/api/issues
 ```
 
-### Update an Issue
+### Get All Issues with Status Filter
 ```bash
-curl -X PUT http://localhost:8080/api/issues/1 \
+curl "http://localhost:8080/api/issues?status=open"
+```
+
+### Get a Single Issue
+```bash
+curl http://localhost:8080/api/issues/1
+```
+
+### Update Issue Status
+```bash
+curl -X PATCH http://localhost:8080/api/issues/1/status \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Login bug",
-    "description": "Users cannot log in with special characters",
-    "status": "in-progress"
+    "new_status_id": 2,
+    "changed_by": 1,
+    "comment": "Moving to in-progress"
   }'
 ```
 
-### Delete an Issue
+### Add a Comment to an Issue
 ```bash
-curl -X DELETE http://localhost:8080/api/issues/1
+curl -X POST http://localhost:8080/api/issues/1/comment \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "content": "This issue needs urgent attention"
+  }'
+```
+
+### Validation Error Example
+```bash
+# Missing required field (title)
+curl -X POST http://localhost:8080/api/issues \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reporter_id": 1,
+    "status_id": 1,
+    "priority": "high"
+  }'
+
+# Response:
+# {
+#   "status": 400,
+#   "message": "Validation failed",
+#   "details": [
+#     {
+#       "field": "Title",
+#       "message": "Title is required"
+#     }
+#   ]
+# }
+```
+
+### Invalid Priority Example
+```bash
+# Invalid priority value
+curl -X POST http://localhost:8080/api/issues \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reporter_id": 1,
+    "status_id": 1,
+    "title": "Test issue",
+    "priority": "invalid"
+  }'
+
+# Response:
+# {
+#   "status": 400,
+#   "message": "Validation failed",
+#   "details": [
+#     {
+#       "field": "Priority",
+#       "message": "Priority must be one of: low, medium, high, critical"
+#     }
+#   ]
+# }
 ```
 
 ## Project Structure
