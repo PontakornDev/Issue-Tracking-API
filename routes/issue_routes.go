@@ -26,4 +26,9 @@ func RegisterRoutes(router *gin.Engine, db *gorm.DB) {
 		issues.PATCH("/:id/status", issueController.UpdateIssueStatus)
 		issues.POST("/:id/comment", commentController.CreateComment)
 	}
+
+	officer := router.Group("/api/officers")
+	{
+		officer.GET("", controllers.NewOfficerController(db).GetAllOfficers)
+	}
 }
