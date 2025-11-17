@@ -32,7 +32,7 @@ func (ic *IssueController) GetAllIssues(c *gin.Context) {
 		Preload("Reporter").
 		Preload("Assignee").
 		Preload("Status").
-		Preload("Comments").
+		Preload("Comments.User").
 		Find(&issues).Error; err != nil {
 		utils.RespondError(c, 500, "Failed to fetch issues", nil)
 		return
