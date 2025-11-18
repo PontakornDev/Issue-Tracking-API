@@ -9,16 +9,26 @@ import (
 
 func MockData(db *gorm.DB) error {
 	//Create mock data
-	mockUser := &entities.User{
-		FullName: "John Doe",
+	mockUser := []*entities.User{
+		{
+			FullName: "John Doe",
+		},
+		{
+			FullName: "Alice Johnson",
+		},
 	}
 	if err := db.Create(mockUser).Error; err != nil {
 		log.Fatalf("failed to create mock user: %v", err)
 		return err
 	}
 
-	mockOfficer := &entities.Officer{
-		FullName: "Jane Smith",
+	mockOfficer := []*entities.Officer{
+		{
+			FullName: "Jane Smith",
+		},
+		{
+			FullName: "Bob Brown",
+		},
 	}
 	if err := db.Create(mockOfficer).Error; err != nil {
 		log.Fatalf("failed to create mock officer: %v", err)
